@@ -1,0 +1,202 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <title>TestNotch</title>
+</head>
+<body>
+<div id="notch">
+    <img src="" alt="logo" id="logo">
+    <input type="range" name="sound-level" id="level" min="0" max="100">
+    <div id="music">
+        <span id="span1"></span>
+        <span id="span2"></span>
+        <span id="span3"></span>
+    </div>
+    <div id="title-container">
+        <p id="title">No song is playing ...</p>
+        <button id="play-button"><img src="play.svg" alt="play" id="play-pause"></button>
+    </div>
+</div>
+<div id="upload-container">
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <img src="upload-song.svg" alt="upload song" id="upload-song-svg">
+        <input type="file" name="music" id="music-upload" accept=".mp3" onchange="uploadSong()">
+        <p id="upload-song-name"></p>
+        <button type="submit" id="upload-button">Upload</button>
+    </form>
+</div>
+<div id="audio-list-container">
+    <div id="title-list">
+        <img src="music-list.svg" alt="music-list-logo" id="music-list-logo">
+        <p id="music-list-text">Liste des chansons</p>
+    </div>
+    <div id="song-list">
+    </div>
+</div>
+<audio src="" id="player"></audio>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+
+<script>
+
+    const play = document.getElementById('play-button');
+    const player = document.getElementById('player');
+    const span1 = document.getElementById('span1');
+    const span2 = document.getElementById('span2');
+    const span3 = document.getElementById('span3');
+    const title = document.getElementById('title');
+    const playButton = document.getElementById('play-pause');
+    const songList = document.getElementById('song-list');
+    const level = document.getElementById('level');
+    const music = document.getElementById('music');
+    const uploadContainer = document.getElementById('upload-container');
+    let playing = false;
+    let musicList = [];
+    {{#each songs}}
+        musicList.push("{{this}}");
+    {{/each}}
+    console.log(musicList);
+
+    level.addEventListener('input', () => {
+        player.volume = level.value / 100;
+    });
+
+    function uploadSong() {
+        let file = document.getElementById('music-upload').files[0];
+        console.log(file);
+        jsmediatags.read(file, {
+            onSuccess: function(tag) {
+                const tags = tag.tags;
+                if (tags.picture) {
+                    const picture = tags.picture;
+                    const base64String = arrayBufferToBase64(picture.data);
+                    const imgUrl = `data:${picture.format};base64,${base64String}`;
+
+                    document.getElementById("upload-song-svg").src = imgUrl;
+                    document.getElementById("upload-song-name").innerText = file.name;
+                } else {
+                    alert('Aucune image de couverture trouvée dans ce fichier MP3.');
+                }
+            },
+            onError: function(error) {
+                console.log(error);
+                alert('Erreur lors de la lecture des métadonnées.');
+            }
+        });
+    }
+
+    function listingSongs() {
+        musicList.forEach(song => {
+            let file = "http://localhost:3000/music/" + song;
+
+            if (file) {
+                jsmediatags.read(file, {
+                    onSuccess: function(tag) {
+                        const tags = tag.tags;
+                        if (tags.picture) {
+                            const picture = tags.picture;
+                            const base64String = arrayBufferToBase64(picture.data);
+                            const imgUrl = `data:${picture.format};base64,${base64String}`;
+
+                            let div = document.createElement('div');
+                            div.className ='song';
+                            div.id = song;
+                            let img = document.createElement('img');
+                            img.id = 'cover';
+                            img.src = imgUrl;
+                            img.alt = song;
+                            let p = document.createElement('p');
+                            p.innerText = song.replaceAll('.mp3', '');
+
+                            div.appendChild(img);
+                            div.appendChild(p);
+                            div.addEventListener('click', () => {
+                                player.pause();
+                                player.src = file;
+                                title.innerText = song.replaceAll('.mp3', '');
+                                playButton.src = 'pause.svg';
+                                playing = true;
+                                player.play();
+                                span1.style.animation = 'span1 0.8s ease-in-out infinite';
+                                span2.style.animation = 'span2 0.8s ease-in-out infinite';
+                                span3.style.animation = 'span3 0.8s ease-in-out infinite';
+                                let logo = document.getElementById('logo');
+                                logo.src = imgUrl;
+                            });
+                            songList.appendChild(div);
+                        } else {
+                            alert('Aucune image de couverture trouvée dans ce fichier MP3.');
+                        }
+                    },
+                    onError: function(error) {
+                        console.log(error);
+                        alert('Erreur lors de la lecture des métadonnées.');
+                    }
+                });
+            }
+        })
+    }
+
+    listingSongs();
+
+    play.addEventListener('click', () => {
+        title.innerText = player.src.split('/')[player.src.split('/').length - 1].replaceAll('%20', ' ').replaceAll('.mp3', '');
+        let file = player.src;
+
+        if (file) {
+            jsmediatags.read(file, {
+                onSuccess: function(tag) {
+                    const tags = tag.tags;
+                    if (tags.picture) {
+                        const picture = tags.picture;
+                        const base64String = arrayBufferToBase64(picture.data);
+                        const imgUrl = `data:${picture.format};base64,${base64String}`;
+
+                        const imgElement = document.getElementById('logo');
+                        imgElement.src = imgUrl;
+                        imgElement.style.display = 'block';
+                    } else {
+                        alert('Aucune image de couverture trouvée dans ce fichier MP3.');
+                    }
+                },
+                onError: function(error) {
+                    console.log(error);
+                    alert('Erreur lors de la lecture des métadonnées.');
+                }
+            });
+        }
+
+        if(playing) {
+            playing = false;
+            playButton.src = 'play.svg';
+            player.pause();
+            span1.style.animation = 'none';
+            span2.style.animation = 'none';
+            span3.style.animation = 'none';
+        } else {
+            playing = true;
+            playButton.src = 'pause.svg';
+            player.play();
+            span1.style.animation = 'span1 0.8s ease-in-out infinite';
+            span2.style.animation = 'span2 0.8s ease-in-out infinite';
+            span3.style.animation = 'span3 0.8s ease-in-out infinite';
+        }
+    });
+
+    function arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
+
+</script>
+
+</html>
